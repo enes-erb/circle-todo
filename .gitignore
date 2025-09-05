@@ -1,0 +1,127 @@
+# Circle Todo - Security-Optimized .gitignore
+# Prevents sensitive information from being committed
+
+# ===== SECURITY CRITICAL - Environment & Secrets =====
+.env
+.env.*
+!.env.example
+config.local.*
+secrets.*
+credentials.*
+*.key
+*.pem
+*.p8
+*.p12
+*.mobileprovision
+*.cer
+*.certSigningRequest
+*.keychain
+AuthKey_*.p8
+google-services.json
+GoogleService-Info.plist
+
+# ===== ANDROID SECURITY - Keystores =====
+*.keystore
+*.jks
+!debug.keystore
+# Note: debug.keystore is allowed for development only
+
+# ===== AI ASSISTANTS & TOOLS =====
+.claude/
+.cursor/
+.windsurf/
+.aider*
+.copilot*
+*.claude/*
+
+# ===== SYSTEM FILES =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+Icon
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ===== DEVELOPMENT =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.eslintcache
+.node_repl_history
+*.tgz
+.yarn-integrity
+
+# ===== LOGS & DEBUGGING =====
+logs/
+*.log
+debug.log
+error.log
+crash.log
+
+# ===== TEMPORARY & CACHE =====
+tmp/
+temp/
+.cache/
+*.tmp
+*.temp
+
+# ===== IDE/EDITORS =====
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# ===== BUILD ARTIFACTS =====
+dist/
+build/
+coverage/
+.nyc_output/
+
+# ===== APP STORE & DEPLOYMENT SENSITIVE =====
+# Production builds (uncomment when ready to release)
+# *.ipa
+# *.apk
+# *.aab
+
+# Fastlane sensitive files
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/.env*
+!fastlane/.env.default
+
+# EAS sensitive files
+eas-build-*.tar.gz
+.expo/
+
+# ===== OTHER TOOLS =====
+.sentryclirc
+.watchmanconfig

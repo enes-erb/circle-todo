@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Circle Todo",
+    "slug": "circle-todo",
+    "description": "Clear your day. Close the circle.",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icons/ios-light.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "primaryColor": "#007AFF",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "splash": {
+      "image": "./assets/icons/splash-icon-light.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff",
+      "dark": {
+        "image": "./assets/icons/splash-icon-dark.png",
+        "backgroundColor": "#111827"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.circletodo.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCalendarsUsageDescription": "This app needs access to calendar to schedule todos with due dates.",
+        "NSUserNotificationUsageDescription": "This app uses notifications to remind you of upcoming todos.",
+        "CFBundleDisplayName": "Circle Todo",
+        "CFBundleName": "Circle Todo"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.circletodo.app",
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-notifications",
+      "expo-calendar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "51ee542b-2e9e-4947-be43-9b5ad824eb34"
+      }
+    },
+    "owner": "eneserb"
+  }
+}
