@@ -9,27 +9,28 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ title, subtitle }: AppHeaderProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   
   const createStyles = () => StyleSheet.create({
     container: {
-      backgroundColor: theme.colors.surface,
+      backgroundColor: theme.colors.background,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
     content: {
-      paddingHorizontal: 20,
-      paddingVertical: 16,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
     },
     title: {
-      fontSize: 22,
+      fontSize: theme.typography.sizes.lg,
       fontWeight: '600',
       color: theme.colors.textPrimary,
     },
     subtitle: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      marginTop: 4,
+      fontSize: theme.typography.sizes.sm,
+      fontWeight: '400',
+      color: theme.colors.textMuted,
+      marginTop: theme.spacing.xs / 2,
     },
   });
 
@@ -50,4 +51,3 @@ export function AppHeader({ title, subtitle }: AppHeaderProps) {
     </SafeAreaView>
   );
 }
-

@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../contexts/ThemeContext';
+// Removed - using theme.* properties directly
 
 interface InlineBannerProps {
   title: string;
@@ -25,6 +27,8 @@ export function InlineBanner({
   onDismiss,
   action,
 }: InlineBannerProps) {
+  const { theme, isDark } = useTheme();
+  
   const handleDismiss = () => {
     if (onDismiss) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -40,62 +44,62 @@ export function InlineBanner({
   };
 
   const getVariantStyle = () => {
-    switch (variant) {
-      case 'success':
-        return styles.successVariant;
-      case 'danger':
-        return styles.dangerVariant;
-      case 'warning':
-        return styles.warningVariant;
-      case 'info':
-        return styles.infoVariant;
-      default:
-        return styles.infoVariant;
-    }
-  };
+    const baseStyle = {
+      backgroundColor: theme.colors.surface,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: isDark ? 0.3 : 0.05,
+      shadowRadius: 8,
+      elevation: 2,
+    };
 
-  const getTitleTextStyle = () => {
     switch (variant) {
       case 'success':
-        return styles.successTitle;
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : theme.colors.successBg + '20',
+          borderColor: theme.colors.success + '30',
+        };
       case 'danger':
-        return styles.dangerTitle;
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : theme.colors.errorBg + '20',
+          borderColor: theme.colors.error + '30',
+        };
       case 'warning':
-        return styles.warningTitle;
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? 'rgba(245, 158, 11, 0.1)' : theme.colors.warningBg + '20',
+          borderColor: theme.colors.warning + '30',
+        };
       case 'info':
-        return styles.infoTitle;
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? 'rgba(59, 130, 246, 0.1)' : theme.colors.infoBg + '20',
+          borderColor: theme.colors.info + '30',
+        };
       default:
-        return styles.infoTitle;
-    }
-  };
-
-  const getMessageTextStyle = () => {
-    switch (variant) {
-      case 'success':
-        return styles.successMessage;
-      case 'danger':
-        return styles.dangerMessage;
-      case 'warning':
-        return styles.warningMessage;
-      case 'info':
-        return styles.infoMessage;
-      default:
-        return styles.infoMessage;
+        return baseStyle;
     }
   };
 
   const getIconColor = () => {
     switch (variant) {
       case 'success':
-        return '#16A34A';
+        return theme.colors.success;
       case 'danger':
-        return '#DC2626';
+        return theme.colors.error;
       case 'warning':
-        return '#D97706';
+        return theme.colors.warning;
       case 'info':
-        return '#2563EB';
+        return theme.colors.info;
       default:
-        return '#2563EB';
+        return theme.colors.info;
     }
   };
 
@@ -115,29 +119,75 @@ export function InlineBanner({
   };
 
   const IconComponent = getIcon();
+  const iconColor = getIconColor();
+
+  const styles = StyleSheet.create({
+    bannerContent: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+    },
+    iconContainer: {
+      marginRight: theme.spacing.md,
+      marginTop: 2,
+      padding: theme.spacing.xs,
+      borderRadius: theme.borderRadius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    },
+    contentContainer: {
+      flex: 1,
+    },
+    titleText: {
+      fontSize: theme.typography.sizes.md,
+      fontWeight: '600',
+      color: theme.colors.textPrimary,
+    },
+    messageText: {
+      fontSize: theme.typography.sizes.sm,
+      color: theme.colors.textSecondary,
+      marginTop: theme.spacing.xs / 2,
+      lineHeight: 20,
+    },
+    actionButton: {
+      marginTop: theme.spacing.sm,
+      alignSelf: 'flex-start',
+      paddingVertical: theme.spacing.xs / 2,
+    },
+    actionText: {
+      fontSize: theme.typography.sizes.sm,
+      fontWeight: '600',
+      color: iconColor,
+      textDecorationLine: 'underline',
+    },
+    dismissButton: {
+      marginLeft: theme.spacing.sm,
+      padding: theme.spacing.xs,
+      borderRadius: theme.borderRadius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    },
+  });
 
   return (
-    <View style={[styles.banner, getVariantStyle()]}>
+    <View style={getVariantStyle()}>
       <View style={styles.bannerContent}>
         {/* Icon */}
         {showIcon && (
           <View style={styles.iconContainer}>
             <IconComponent 
               size={18} 
-              color={getIconColor()} 
-              strokeWidth={1.75}
+              color={iconColor} 
+              strokeWidth={2}
             />
           </View>
         )}
 
         {/* Content */}
         <View style={styles.contentContainer}>
-          <Text style={[styles.titleText, getTitleTextStyle()]}>
+          <Text style={styles.titleText}>
             {title}
           </Text>
           
           {message && (
-            <Text style={[styles.messageText, getMessageTextStyle()]}>
+            <Text style={styles.messageText}>
               {message}
             </Text>
           )}
@@ -151,7 +201,7 @@ export function InlineBanner({
               accessibilityRole="button"
               accessibilityLabel={action.label}
             >
-              <Text style={[styles.actionText, getTitleTextStyle()]}>
+              <Text style={styles.actionText}>
                 {action.label}
               </Text>
             </TouchableOpacity>
@@ -169,8 +219,8 @@ export function InlineBanner({
           >
             <X 
               size={16} 
-              color={getIconColor()} 
-              strokeWidth={1.75}
+              color={theme.colors.textMuted} 
+              strokeWidth={2}
             />
           </TouchableOpacity>
         )}
@@ -178,88 +228,3 @@ export function InlineBanner({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  banner: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  bannerContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  iconContainer: {
-    marginRight: 12,
-    marginTop: 2,
-  },
-  contentContainer: {
-    flex: 1,
-  },
-  titleText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  messageText: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  actionButton: {
-    marginTop: 12,
-    alignSelf: 'flex-start',
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-  },
-  dismissButton: {
-    marginLeft: 12,
-    padding: 8,
-    borderRadius: 8,
-  },
-  // Variant styles
-  successVariant: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
-  },
-  dangerVariant: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  warningVariant: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FED7AA',
-  },
-  infoVariant: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  // Title text colors
-  successTitle: {
-    color: '#166534',
-  },
-  dangerTitle: {
-    color: '#DC2626',
-  },
-  warningTitle: {
-    color: '#D97706',
-  },
-  infoTitle: {
-    color: '#2563EB',
-  },
-  // Message text colors
-  successMessage: {
-    color: '#15803D',
-  },
-  dangerMessage: {
-    color: '#DC2626',
-  },
-  warningMessage: {
-    color: '#D97706',
-  },
-  infoMessage: {
-    color: '#2563EB',
-  },
-});

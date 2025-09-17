@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,21 @@ import {
   Pressable,
   TouchableOpacity,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ArrowLeft, Check, Calendar, X, Plus } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { TodoGroup } from '../types/todo';
 import { storageService } from '../services/storage';
 import { localizationService } from '../services/localization';
 import { TextField } from '../components/ui/TextField';
-import { SuccessAnimation } from '../components/ui/SuccessAnimation';
+import { SimpleNotification } from '../components/ui/SimpleNotification';
 import { CreateGroupModal } from '../components/ui/CreateGroupModal';
 import { useTheme } from '../contexts/ThemeContext';
 import { logger } from '../utils/logger';
+import { createFrostedSurface } from '../utils/frostedGlass';
 
 export default function AddTodoScreen({ navigation, route }: any) {
   const { theme, isDark } = useTheme();
@@ -29,8 +32,10 @@ export default function AddTodoScreen({ navigation, route }: any) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [groups, setGroups] = useState<TodoGroup[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [titleError, setTitleError] = useState('');
+  const [showSuccessFeedback, setShowSuccessFeedback] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const feedbackAnimation = useState(new Animated.Value(0))[0];
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | undefined>(undefined);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
 
@@ -67,6 +72,35 @@ export default function AddTodoScreen({ navigation, route }: any) {
     }
   };
 
+  const showSuccessFeedbackAnimation = () => {
+    console.log('🎉 Starting success feedback animation');
+    setShowSuccessFeedback(true);
+    
+    // Strong haptic feedback for task creation
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    Animated.sequence([
+      Animated.timing(feedbackAnimation, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1200), // Verkürzt von 2000ms auf 1200ms
+      Animated.timing(feedbackAnimation, {
+        toValue: 0,
+        duration: 200, // Verkürzt von 300ms auf 200ms für schnellere Navigation
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      console.log('🎉 Animation finished, navigating...');
+      setShowSuccessFeedback(false);
+      navigation.navigate('Main', { 
+        screen: 'Home', 
+        params: { showNotification: undefined } // Keine doppelte Benachrichtigung
+      });
+    });
+  };
+
   const handleCreateGroup = async (groupData: Omit<TodoGroup, 'id' | 'createdAt'>) => {
     try {
       const newGroup = await storageService.addGroup(groupData);
@@ -83,6 +117,9 @@ export default function AddTodoScreen({ navigation, route }: any) {
       return;
     }
 
+    // Prevent double-clicks
+    if (loading) return;
+
     setTitleError('');
     setLoading(true);
     try {
@@ -94,19 +131,16 @@ export default function AddTodoScreen({ navigation, route }: any) {
         ...(dueDate && { dueDate }),
       });
       
-      // Show success animation
-      setShowSuccess(true);
+      // Reset loading state and show success feedback animation  
+      setLoading(false);
+      setSuccessMessage('Task erstellt!');
+      showSuccessFeedbackAnimation();
     } catch (error) {
       logger.error('Failed to save todo:', error);
       setLoading(false);
     }
   };
 
-  const handleSuccessComplete = () => {
-    setShowSuccess(false);
-    setLoading(false);
-    navigation.goBack();
-  };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -129,13 +163,14 @@ export default function AddTodoScreen({ navigation, route }: any) {
     ];
   };
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: theme.colors.background,
     },
     headerSafeArea: {
-      backgroundColor: theme.colors.surface,
+      ...createFrostedSurface(isDark),
+      borderRadius: 0,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     },
@@ -166,19 +201,10 @@ export default function AddTodoScreen({ navigation, route }: any) {
       flex: 1,
     },
     section: {
-      backgroundColor: theme.colors.surface,
+      ...createFrostedSurface(isDark),
       marginHorizontal: 20,
       marginTop: 20,
-      borderRadius: 12,
       padding: 20,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
     },
     sectionTitle: {
       fontSize: 16,
@@ -317,7 +343,34 @@ export default function AddTodoScreen({ navigation, route }: any) {
     bottomSpacing: {
       height: 20,
     },
-  });
+    successFeedback: {
+      position: 'absolute',
+      top: 100, // Weiter unten wegen Header
+      left: 20,
+      right: 20,
+      backgroundColor: theme.colors.accent,
+      borderRadius: 12,
+      paddingVertical: 16,
+      paddingHorizontal: 20,
+      flexDirection: 'row',
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 12,
+      elevation: 8,
+      zIndex: 9999, // Höherer z-index
+    },
+    successText: {
+      color: 'white',
+      fontSize: 16,
+      fontWeight: '600',
+      marginLeft: 12,
+    },
+  }), [theme, isDark]);
 
   return (
     <View style={styles.container}>
@@ -368,6 +421,7 @@ export default function AddTodoScreen({ navigation, route }: any) {
               error={titleError}
               multiline
               numberOfLines={3}
+              autoFocus={true}
               textAlignVertical="top"
               style={styles.taskInput}
             />
@@ -424,10 +478,10 @@ export default function AddTodoScreen({ navigation, route }: any) {
             
             <View style={styles.priorityContainer}>
               {[
-                { value: undefined, label: 'None', icon: '' },
-                { value: 'low' as const, label: 'Low', icon: '🟢' },
-                { value: 'medium' as const, label: 'Medium', icon: '🟡' },
-                { value: 'high' as const, label: 'High', icon: '🔴' }
+                { value: undefined, label: 'None', color: theme.colors.textMuted },
+                { value: 'low' as const, label: 'Low', color: '#22C55E' },
+                { value: 'medium' as const, label: 'Medium', color: '#EAB308' },
+                { value: 'high' as const, label: 'High', color: '#EF4444' }
               ].map((option) => (
                 <TouchableOpacity
                   key={option.label}
@@ -439,16 +493,26 @@ export default function AddTodoScreen({ navigation, route }: any) {
                       : styles.unselectedPriorityChip
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.priorityChipText,
-                      priority === option.value 
-                        ? styles.selectedPriorityText
-                        : styles.unselectedPriorityText
-                    ]}
-                  >
-                    {option.icon ? `${option.icon} ${option.label}` : option.label}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {option.value && (
+                      <View style={{ 
+                        width: 10, 
+                        height: 10, 
+                        borderRadius: 5, 
+                        backgroundColor: option.color 
+                      }} />
+                    )}
+                    <Text
+                      style={[
+                        styles.priorityChipText,
+                        priority === option.value 
+                          ? styles.selectedPriorityText
+                          : styles.unselectedPriorityText
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </View>
@@ -531,16 +595,35 @@ export default function AddTodoScreen({ navigation, route }: any) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <SuccessAnimation
-        visible={showSuccess}
-        onComplete={handleSuccessComplete}
-      />
 
       <CreateGroupModal
         isVisible={showCreateGroupModal}
         onClose={() => setShowCreateGroupModal(false)}
         onCreateGroup={handleCreateGroup}
       />
+
+      {/* Success Feedback Animation */}
+      {showSuccessFeedback && (
+        <Animated.View
+          style={[
+            styles.successFeedback,
+            {
+              opacity: feedbackAnimation,
+              transform: [{
+                translateY: feedbackAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-50, 0],
+                })
+              }]
+            }
+          ]}
+        >
+          <Check size={20} color="white" strokeWidth={2} />
+          <Text style={styles.successText}>
+            {successMessage}
+          </Text>
+        </Animated.View>
+      )}
 
       <SafeAreaView edges={['bottom']} />
     </View>

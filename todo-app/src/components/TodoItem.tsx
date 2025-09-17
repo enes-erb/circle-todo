@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
-import { CheckCircle2, Circle, X } from 'lucide-react-native';
+import { CheckCircle2, Circle, X, Calendar, AlertCircle } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { Todo, TodoGroup } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
 import { getFormattedDate } from '../utils/taskSorting';
+import { createFrostedCard } from '../utils/frostedGlass';
 
 interface TodoItemProps {
   todo: Todo;
@@ -14,60 +15,88 @@ interface TodoItemProps {
   isCompleting?: boolean;
 }
 
-const getPriorityIcon = (priority: 'low' | 'medium' | 'high') => {
-  switch (priority) {
-    case 'low': return '🟢';
-    case 'medium': return '🟡';
-    case 'high': return '🔴';
-    default: return '';
-  }
+const getPriorityColor = (priority: 'low' | 'medium' | 'high', isDark: boolean) => {
+  const colors = {
+    low: '#22C55E',    // Grün
+    medium: '#EAB308', // Gelb  
+    high: '#EF4444',   // Rot
+  };
+  return colors[priority];
 };
 
-export default function TodoItem({ todo, groups, onToggleComplete, onDelete, isCompleting = false }: TodoItemProps) {
-  const { theme } = useTheme();
-  const group = groups.find(g => g.id === todo.groupId);
-  const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !todo.completed;
+const TodoItemComponent = React.memo(({ todo, groups, onToggleComplete, onDelete, isCompleting = false }: TodoItemProps) => {
+  const { theme, isDark } = useTheme();
+  const group = React.useMemo(() => groups.find(g => g.id === todo.groupId), [groups, todo.groupId]);
+  const isOverdue = React.useMemo(() => 
+    todo.dueDate && new Date(todo.dueDate) < new Date() && !todo.completed,
+    [todo.dueDate, todo.completed]
+  );
   
-  // Animation for strikethrough effect
-  const [strikethroughAnim] = useState(new Animated.Value(0));
+  // Animation values
+  const [strikethroughAnim] = React.useState(new Animated.Value(0));
+  const [scaleAnim] = React.useState(new Animated.Value(1));
+  const [fadeAnim] = React.useState(new Animated.Value(1));
   
-  useEffect(() => {
+  React.useEffect(() => {
     if (isCompleting) {
-      // Start strikethrough animation
-      Animated.timing(strikethroughAnim, {
-        toValue: 1,
-        duration: 1000, // Animation over 1 second
-        useNativeDriver: false,
-      }).start();
+      // Start strikethrough and fade animation
+      Animated.parallel([
+        Animated.timing(strikethroughAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: false,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0.5,
+          duration: 800,
+          useNativeDriver: true,
+        })
+      ]).start();
     } else {
       strikethroughAnim.setValue(0);
+      fadeAnim.setValue(1);
     }
-  }, [isCompleting, strikethroughAnim]);
+  }, [isCompleting, strikethroughAnim, fadeAnim]);
 
-  const handleToggleComplete = () => {
+  const handlePressIn = React.useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.98,
+      useNativeDriver: true,
+      friction: 5,
+      tension: 100,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = React.useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      friction: 5,
+      tension: 100,
+    }).start();
+  }, [scaleAnim]);
+
+  const handleToggleComplete = React.useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onToggleComplete(todo.id);
-  };
+  }, [onToggleComplete, todo.id]);
 
-  const handleDelete = () => {
+  const handleDelete = React.useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onDelete(todo.id);
-  };
+  }, [onDelete, todo.id]);
 
-  // Using the shared formatting function from utils
-
-  const styles = StyleSheet.create({
+  const styles = React.useMemo(() => StyleSheet.create({
     container: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 8,
+      ...createFrostedCard(isDark),
+      marginBottom: theme.spacing.sm,
+    },
+    innerContainer: {
+      padding: theme.spacing.md,
     },
     overdue: {
-      borderLeftWidth: 4,
-      borderLeftColor: theme.colors.danger,
+      borderLeftWidth: 3,
+      borderLeftColor: theme.colors.error,
     },
     content: {
       flexDirection: 'row',
@@ -75,11 +104,12 @@ export default function TodoItem({ todo, groups, onToggleComplete, onDelete, isC
     },
     leftContent: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       flex: 1,
     },
     checkbox: {
-      marginRight: 12,
+      marginRight: theme.spacing.md,
+      marginTop: 2,
     },
     textContent: {
       flex: 1,
@@ -88,168 +118,202 @@ export default function TodoItem({ todo, groups, onToggleComplete, onDelete, isC
       position: 'relative',
     },
     title: {
-      fontSize: 17,
-      lineHeight: 24,
+      fontSize: theme.typography.sizes.md,
       fontWeight: '500',
       color: theme.colors.textPrimary,
-      marginBottom: 4,
+      marginBottom: theme.spacing.xs,
     },
     completedTitle: {
-      color: theme.colors.textSecondary,
+      color: theme.colors.textMuted,
       textDecorationLine: 'line-through',
     },
     completingTitle: {
       color: theme.colors.textSecondary,
     },
     overdueTitle: {
-      color: theme.colors.danger,
+      color: theme.colors.error,
     },
     strikethrough: {
       position: 'absolute',
       top: '50%',
       left: 0,
-      height: 2,
-      backgroundColor: theme.colors.textSecondary,
+      height: 1.5,
+      backgroundColor: theme.colors.textMuted,
       transform: [{ translateY: -1 }],
     },
     metadata: {
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'wrap',
+      gap: theme.spacing.sm,
     },
-    groupInfo: {
+    metadataItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginRight: 16,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: theme.borderRadius.sm,
+      gap: theme.spacing.xs,
     },
     groupDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      marginRight: 8,
-    },
-    dateInfo: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    separator: {
-      fontSize: 13,
-      color: theme.colors.textSecondary,
-      marginRight: 8,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
     },
     metadataText: {
-      fontSize: 13,
+      fontSize: theme.typography.sizes.xs,
+      fontWeight: '500',
       color: theme.colors.textSecondary,
     },
     overdueText: {
-      color: theme.colors.danger,
-      fontWeight: '500',
+      color: theme.colors.error,
     },
     deleteButton: {
-      marginLeft: 12,
-      padding: 8,
-      borderRadius: 8,
+      padding: theme.spacing.sm,
+      borderRadius: theme.borderRadius.sm,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+      marginLeft: theme.spacing.sm,
     },
-  });
+    deleteButtonPressed: {
+      backgroundColor: theme.colors.errorBg,
+    },
+  }), [theme, isDark]);
 
   return (
-    <Pressable 
-      onPress={handleToggleComplete}
-      style={[
-        styles.container,
-        { opacity: todo.completed ? 0.6 : 1 },
-        isOverdue && styles.overdue
-      ]}
-      accessibilityRole="button"
-      accessibilityLabel={`${todo.completed ? 'Mark as incomplete' : 'Mark as complete'}: ${todo.title}`}
-      accessibilityHint={`Task ${todo.completed ? 'completed' : 'pending'}${isOverdue ? ', overdue' : ''}`}
-    >
-      <View style={styles.content}>
-        <View style={styles.leftContent}>
-          <View style={styles.checkbox}>
-            {todo.completed ? (
-              <CheckCircle2 
-                size={22} 
-                color={theme.colors.success} 
-                strokeWidth={1.75} 
-              />
-            ) : (
-              <Circle 
-                size={22} 
-                color={theme.colors.textSecondary} 
-                strokeWidth={1.75} 
-              />
-            )}
-          </View>
-          
-          <View style={styles.textContent}>
-            <View style={styles.titleContainer}>
-              <Text 
-                style={[
-                  styles.title,
-                  todo.completed && styles.completedTitle,
-                  isOverdue && styles.overdueTitle,
-                  isCompleting && styles.completingTitle
-                ]}
-                numberOfLines={2}
-              >
-{todo.priority && `${getPriorityIcon(todo.priority)} `}{todo.title}
-              </Text>
-              {isCompleting && (
-                <Animated.View
-                  style={[
-                    styles.strikethrough,
-                    {
-                      width: strikethroughAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: ['0%', '100%']
-                      })
-                    }
-                  ]}
-                />
-              )}
-            </View>
-            
-            {(group || todo.dueDate) && (
-              <View style={styles.metadata}>
-                {group && (
-                  <View style={styles.groupInfo}>
-                    <View 
-                      style={[styles.groupDot, { backgroundColor: group.color }]}
-                    />
-                    <Text style={styles.metadataText}>
-                      {group.name}
-                    </Text>
-                  </View>
+    <Animated.View style={[
+      { 
+        transform: [{ scale: scaleAnim }],
+        opacity: todo.completed ? fadeAnim.interpolate({
+          inputRange: [0.5, 1],
+          outputRange: [0.5, 0.6]
+        }) : fadeAnim
+      }
+    ]}>
+      <Pressable 
+        onPress={handleToggleComplete}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.container}
+        accessibilityRole="button"
+        accessibilityLabel={`${todo.completed ? 'Mark as incomplete' : 'Mark as complete'}: ${todo.title}`}
+        accessibilityHint={`Task ${todo.completed ? 'completed' : 'pending'}${isOverdue ? ', overdue' : ''}`}
+      >
+        
+        <View style={styles.innerContainer}>
+          <View style={styles.content}>
+            <View style={styles.leftContent}>
+              <View style={styles.checkbox}>
+                {todo.completed ? (
+                  <CheckCircle2 
+                    size={20} 
+                    color={theme.colors.success} 
+                    strokeWidth={2} 
+                  />
+                ) : (
+                  <Circle 
+                    size={20} 
+                    color={theme.colors.textMuted} 
+                    strokeWidth={1.5} 
+                  />
                 )}
+              </View>
+              
+              <View style={styles.textContent}>
+                <View style={styles.titleContainer}>
+                  <Text 
+                    style={[
+                      styles.title,
+                      todo.completed && styles.completedTitle,
+                      isCompleting && styles.completingTitle
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {todo.title}
+                  </Text>
+                  {isCompleting && (
+                    <Animated.View
+                      style={[
+                        styles.strikethrough,
+                        {
+                          width: strikethroughAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%']
+                          })
+                        }
+                      ]}
+                    />
+                  )}
+                </View>
                 
-                {todo.dueDate && (
-                  <View style={styles.dateInfo}>
-                    {group && <Text style={styles.separator}>•</Text>}
-                    <Text style={[
-                      styles.metadataText,
-                      isOverdue && styles.overdueText
-                    ]}>
-                      {getFormattedDate(new Date(todo.dueDate))}
-                    </Text>
+                {(todo.dueDate || todo.priority) && (
+                  <View style={styles.metadata}>
+                    {todo.dueDate && (
+                      <View style={styles.metadataItem}>
+                        {isOverdue ? (
+                          <AlertCircle size={12} color={theme.colors.error} strokeWidth={2} />
+                        ) : (
+                          <Calendar size={12} color={theme.colors.textMuted} strokeWidth={1.5} />
+                        )}
+                        <Text style={[
+                          styles.metadataText,
+                          isOverdue && styles.overdueText
+                        ]}>
+                          {getFormattedDate(new Date(todo.dueDate))}
+                        </Text>
+                      </View>
+                    )}
+                    
+                    {todo.priority && !todo.completed && (
+                      <View style={[
+                        styles.metadataItem,
+                        { 
+                          backgroundColor: getPriorityColor(todo.priority, isDark) + '20',
+                        }
+                      ]}>
+                        <Text style={[
+                          styles.metadataText,
+                          { color: getPriorityColor(todo.priority, isDark) }
+                        ]}>
+                          {todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 )}
               </View>
-            )}
+            </View>
+            
+            <Pressable 
+              onPress={handleDelete}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.deleteButtonPressed
+              ]}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete task: ${todo.title}`}
+            >
+              <X size={16} color={theme.colors.textMuted} strokeWidth={1.5} />
+            </Pressable>
           </View>
         </View>
-        
-        <Pressable 
-          onPress={handleDelete}
-          style={styles.deleteButton}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          accessibilityRole="button"
-          accessibilityLabel={`Delete task: ${todo.title}`}
-        >
-          <X size={18} color={theme.colors.textSecondary} strokeWidth={1.75} />
-        </Pressable>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison for memo
+  return (
+    prevProps.todo.id === nextProps.todo.id &&
+    prevProps.todo.completed === nextProps.todo.completed &&
+    prevProps.todo.title === nextProps.todo.title &&
+    prevProps.todo.priority === nextProps.todo.priority &&
+    prevProps.todo.dueDate === nextProps.todo.dueDate &&
+    prevProps.todo.groupId === nextProps.todo.groupId &&
+    prevProps.isCompleting === nextProps.isCompleting
+  );
+});
 
+TodoItemComponent.displayName = 'TodoItem';
+
+export default TodoItemComponent;

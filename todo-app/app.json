@@ -3,7 +3,7 @@
     "name": "Circle Todo",
     "slug": "circle-todo",
     "description": "Clear your day. Close the circle.",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icons/ios-light.png",
     "userInterfaceStyle": "automatic",
@@ -24,7 +24,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.circletodo.app",
-      "buildNumber": "1",
+      "buildNumber": "3",
       "infoPlist": {
         "NSCalendarsUsageDescription": "This app needs access to calendar to schedule todos with due dates.",
         "NSUserNotificationUsageDescription": "This app uses notifications to remind you of upcoming todos.",

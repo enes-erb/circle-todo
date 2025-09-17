@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -29,6 +30,8 @@ export function Button({
   accessibilityLabel,
   accessibilityHint,
 }: ButtonProps) {
+  const { theme } = useTheme();
+  
   const handlePress = () => {
     if (disabled || loading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -38,30 +41,43 @@ export function Button({
   const getVariantStyle = () => {
     switch (variant) {
       case 'primary':
-        return styles.primaryVariant;
+        return {
+          backgroundColor: theme.colors.accent,
+          borderWidth: 0,
+        };
       case 'secondary':
-        return styles.secondaryVariant;
+        return {
+          backgroundColor: theme.colors.surface,
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+        };
       case 'ghost':
-        return styles.ghostVariant;
+        return {
+          backgroundColor: 'transparent',
+        };
       case 'danger':
-        return styles.dangerVariant;
+        return {
+          backgroundColor: theme.colors.error,
+        };
       default:
-        return styles.primaryVariant;
+        return {
+          backgroundColor: theme.colors.accent,
+        };
     }
   };
 
   const getTextStyle = () => {
     switch (variant) {
       case 'primary':
-        return styles.primaryText;
+        return { color: theme.colors.textInverse };
       case 'secondary':
-        return styles.secondaryText;
+        return { color: theme.colors.textPrimary };
       case 'ghost':
-        return styles.ghostText;
+        return { color: theme.colors.accent };
       case 'danger':
-        return styles.dangerText;
+        return { color: theme.colors.textInverse };
       default:
-        return styles.primaryText;
+        return { color: theme.colors.textInverse };
     }
   };
 
@@ -107,19 +123,72 @@ export function Button({
   const getIconColor = () => {
     switch (variant) {
       case 'primary':
-        return '#FFFFFF';
+        return theme.colors.textInverse;
       case 'secondary':
-        return '#0B0F14';
+        return theme.colors.textPrimary;
       case 'ghost':
-        return '#2D5016';
+        return theme.colors.accent;
       case 'danger':
-        return '#FFFFFF';
+        return theme.colors.textInverse;
       default:
-        return '#FFFFFF';
+        return theme.colors.textInverse;
     }
   };
 
   const isDisabled = disabled || loading;
+
+  const styles = StyleSheet.create({
+    button: {
+      borderRadius: 8,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonText: {
+      fontWeight: '500',
+    },
+    iconContainer: {},
+    iconLeft: {
+      marginRight: 8,
+    },
+    iconRight: {
+      marginLeft: 8,
+    },
+    fullWidth: {
+      width: '100%',
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    // Size styles
+    smallSize: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+    mediumSize: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    largeSize: {
+      paddingHorizontal: 24,
+      paddingVertical: 14,
+    },
+    // Text size styles
+    smallText: {
+      fontSize: 14,
+    },
+    mediumText: {
+      fontSize: 16,
+    },
+    largeText: {
+      fontSize: 18,
+    },
+  });
 
   return (
     <TouchableOpacity
@@ -176,84 +245,3 @@ export function Button({
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontWeight: '500',
-  },
-  iconContainer: {},
-  iconLeft: {
-    marginRight: 8,
-  },
-  iconRight: {
-    marginLeft: 8,
-  },
-  fullWidth: {
-    width: '100%',
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  // Variant styles
-  primaryVariant: {
-    backgroundColor: '#2D5016',
-  },
-  secondaryVariant: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E6E8EB',
-  },
-  ghostVariant: {
-    backgroundColor: 'transparent',
-  },
-  dangerVariant: {
-    backgroundColor: '#EF4444',
-  },
-  // Size styles
-  smallSize: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  mediumSize: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  largeSize: {
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-  },
-  // Text variant styles
-  primaryText: {
-    color: '#FFFFFF',
-  },
-  secondaryText: {
-    color: '#0B0F14',
-  },
-  ghostText: {
-    color: '#2D5016',
-  },
-  dangerText: {
-    color: '#FFFFFF',
-  },
-  // Text size styles
-  smallText: {
-    fontSize: 14,
-  },
-  mediumText: {
-    fontSize: 16,
-  },
-  largeText: {
-    fontSize: 18,
-  },
-});

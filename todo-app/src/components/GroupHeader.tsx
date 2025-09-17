@@ -2,21 +2,22 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { TodoGroup } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+// Removed - using theme.* properties directly
 
 interface GroupHeaderProps {
   group: TodoGroup;
   taskCount: number;
 }
 
-export default function GroupHeader({ group, taskCount }: GroupHeaderProps) {
+const GroupHeader = React.memo(({ group, taskCount }: GroupHeaderProps) => {
   const { theme, isDark } = useTheme();
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
-      paddingVertical: 12,
-      paddingHorizontal: 4,
-      marginTop: 16,
-      marginBottom: 8,
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.xs,
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
     },
     content: {
       flexDirection: 'row',
@@ -28,52 +29,57 @@ export default function GroupHeader({ group, taskCount }: GroupHeaderProps) {
       alignItems: 'center',
       flex: 1,
     },
-    groupDot: {
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-      marginRight: 12,
+    groupIndicator: {
+      width: 3,
+      height: 20,
+      borderRadius: 2,
       backgroundColor: group.color,
+      marginRight: theme.spacing.sm,
+      opacity: 0.8,
     },
     groupName: {
-      fontSize: 18,
+      fontSize: theme.typography.sizes.md,
       fontWeight: '600',
       color: theme.colors.textPrimary,
       flex: 1,
+      letterSpacing: -0.2,
+    },
+    taskCountBadge: {
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+      borderRadius: theme.borderRadius.sm,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 2,
+      minWidth: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     taskCount: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.textSecondary,
-      backgroundColor: theme.colors.surfaceSecondary,
-      borderRadius: 12,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      minWidth: 24,
+      fontSize: theme.typography.sizes.xs,
+      fontWeight: '600',
+      color: theme.colors.textMuted,
       textAlign: 'center',
     },
-    divider: {
-      height: 1,
-      backgroundColor: theme.colors.border,
-      marginTop: 8,
-      opacity: 0.5,
-    },
-  }), [theme, group.color]);
+  }), [theme, group.color, isDark]);
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.leftContent}>
-          <View style={styles.groupDot} />
+          <View style={styles.groupIndicator} />
           <Text style={styles.groupName} numberOfLines={1}>
             {group.name}
           </Text>
         </View>
-        <Text style={styles.taskCount}>
-          {taskCount}
-        </Text>
+        <View style={styles.taskCountBadge}>
+          <Text style={styles.taskCount}>
+            {taskCount}
+          </Text>
+        </View>
       </View>
-      <View style={styles.divider} />
     </View>
   );
-}
+});
+
+GroupHeader.displayName = 'GroupHeader';
+
+export default GroupHeader;

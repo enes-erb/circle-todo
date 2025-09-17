@@ -32,9 +32,12 @@ import { storageService } from '../services/storage';
 import { localizationService } from '../services/localization';
 import { AppSettings } from '../types';
 import { useTheme } from '../contexts/ThemeContext';
+import { useContentPadding } from '../hooks/useContentPadding';
 import { notificationService } from '../services/notifications';
+import { createFrostedSurface } from '../utils/frostedGlass';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { logger } from '../utils/logger';
+const packageJson = require('../../package.json');
 
 interface SettingItemProps {
   icon: React.ReactNode;
@@ -45,7 +48,7 @@ interface SettingItemProps {
   destructive?: boolean;
 }
 
-function SettingItem({ icon, title, description, rightElement, onPress, destructive = false, theme }: SettingItemProps & { theme: any }) {
+function SettingItem({ icon, title, description, rightElement, onPress, destructive = false, theme, isDark }: SettingItemProps & { theme: any; isDark: boolean }) {
   const itemStyles = StyleSheet.create({
     settingItem: {
       flexDirection: 'row',
@@ -153,7 +156,8 @@ function Section({ title, children, theme }: SectionProps & { theme: any }) {
 }
 
 export default function SettingsScreen({ navigation }: any) {
-  const { theme, themeMode, setThemeMode } = useTheme();
+  const { theme, themeMode, setThemeMode, isDark } = useTheme();
+  const { contentPadding } = useContentPadding();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [languageModalVisible, setLanguageModalVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
@@ -170,6 +174,7 @@ export default function SettingsScreen({ navigation }: any) {
     },
     content: {
       paddingVertical: 16,
+      paddingBottom: contentPadding,
     },
     separator: {
       height: 1,
@@ -188,23 +193,14 @@ export default function SettingsScreen({ navigation }: any) {
       paddingHorizontal: 20,
     },
     modalContent: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
+      ...createFrostedSurface(isDark),
       padding: 24,
       width: '100%',
       maxWidth: 400,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
     },
     modalTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
       textAlign: 'center',
       marginBottom: 24,
@@ -236,7 +232,7 @@ export default function SettingsScreen({ navigation }: any) {
       backgroundColor: theme.colors.textInverse,
     },
     languageText: {
-      fontSize: 16,
+      fontSize: theme.typography.sizes.md,
       color: theme.colors.textPrimary,
     },
     modalActions: {
@@ -264,29 +260,20 @@ export default function SettingsScreen({ navigation }: any) {
       marginLeft: 12,
     },
     themeOptionTitle: {
-      fontSize: 16,
+      fontSize: theme.typography.sizes.md,
       color: theme.colors.textPrimary,
-      fontWeight: '500',
+      fontWeight: theme.typography.weights.medium,
     },
     themeOptionDescription: {
-      fontSize: 14,
-      color: theme.colors.textSecondary,
+      fontSize: theme.typography.sizes.sm,
+      color: theme.colors.textMuted,
       marginTop: 2,
     },
     privacyModal: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 16,
+      ...createFrostedSurface(isDark),
       marginHorizontal: 16,
       marginVertical: 60,
       maxHeight: '85%',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 8,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 16,
-      elevation: 12,
     },
     privacyHeader: {
       flexDirection: 'row',
@@ -298,8 +285,8 @@ export default function SettingsScreen({ navigation }: any) {
       borderBottomColor: theme.colors.border,
     },
     privacyTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
     },
     modalCloseButton: {
@@ -325,8 +312,8 @@ export default function SettingsScreen({ navigation }: any) {
       marginBottom: 24,
     },
     sectionTitle: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.md,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
       marginBottom: 8,
     },
@@ -544,6 +531,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Section title="Language & Region" theme={theme}>
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Globe size={20} color={theme.colors.textSecondary} />}
               title="Language"
               description={settings.language === 'en' ? 'English' : 'Deutsch'}
@@ -555,6 +543,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Section title="Notifications" theme={theme}>
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Bell size={20} color={theme.colors.textSecondary} />}
               title="Enable Notifications"
               description="Get reminded about open tasks"
@@ -574,6 +563,7 @@ export default function SettingsScreen({ navigation }: any) {
             <View style={styles.separator} />
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Clock size={20} color={theme.colors.textSecondary} />}
               title="Daily Reminder"
               description="Daily notification at set time"
@@ -608,6 +598,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Section title="Appearance" theme={theme}>
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Palette size={20} color={theme.colors.textSecondary} />}
               title="Theme"
               description={getThemeDescription()}
@@ -621,6 +612,7 @@ export default function SettingsScreen({ navigation }: any) {
           <Section title="Data Management" theme={theme}>
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Trash2 size={20} color={theme.colors.error} />}
               title="Clear All Data"
               description="Delete all todos and groups"
@@ -632,13 +624,15 @@ export default function SettingsScreen({ navigation }: any) {
           <Section title="About" theme={theme}>
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Info size={20} color={theme.colors.textSecondary} />}
               title={localizationService.t('app.title')}
-              description="Version 1.0.0"
+              description={`Version ${packageJson.version}`}
             />
             <View style={styles.separator} />
             <SettingItem
               theme={theme}
+              isDark={isDark}
               icon={<Shield size={20} color={theme.colors.textSecondary} />}
               title="Privacy Policy"
               description="How we protect your data"

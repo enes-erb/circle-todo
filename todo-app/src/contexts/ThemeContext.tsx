@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { Appearance } from 'react-native';
 import { Theme, lightTheme, darkTheme } from '../constants/theme';
 import { storageService } from '../services/storage';
@@ -31,8 +31,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [systemColorScheme, setSystemColorScheme] = useState(Appearance.getColorScheme());
 
   // Determine if dark mode should be active
-  const isDark = themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark');
-  const theme = isDark ? darkTheme : lightTheme;
+  const isDark = useMemo(() => 
+    themeMode === 'dark' || (themeMode === 'system' && systemColorScheme === 'dark'), 
+    [themeMode, systemColorScheme]
+  );
+  const theme = useMemo(() => isDark ? darkTheme : lightTheme, [isDark]);
 
   useEffect(() => {
     // Load saved theme preference
@@ -77,16 +80,16 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     setThemeMode(newMode);
   };
 
+  const contextValue = useMemo(() => ({
+    theme,
+    isDark,
+    toggleTheme,
+    setThemeMode,
+    themeMode,
+  }), [theme, isDark, toggleTheme, setThemeMode, themeMode]);
+
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        isDark,
-        toggleTheme,
-        setThemeMode,
-        themeMode,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

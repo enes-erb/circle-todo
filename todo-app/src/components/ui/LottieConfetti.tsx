@@ -7,10 +7,10 @@ interface LottieConfettiProps {
   onComplete?: () => void;
 }
 
-export function LottieConfetti({
+export const LottieConfetti = React.memo(({
   start = false,
   onComplete
-}: LottieConfettiProps) {
+}: LottieConfettiProps) => {
   const animationRef = useRef<LottieView>(null);
 
   useEffect(() => {
@@ -21,14 +21,14 @@ export function LottieConfetti({
     }
   }, [start]);
 
-  const handleAnimationFinish = () => {
+  const handleAnimationFinish = React.useCallback(() => {
     if (onComplete) {
       // Small delay to ensure clean completion
       setTimeout(() => {
         onComplete();
       }, 100);
     }
-  };
+  }, [onComplete]);
 
   if (!start) return null;
 
@@ -45,7 +45,7 @@ export function LottieConfetti({
       />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -19,12 +19,15 @@ import { localizationService } from '../services/localization';
 import { AppHeader } from '../components/ui/AppHeader';
 import { FAB } from '../components/ui/FAB';
 import { useTheme } from '../contexts/ThemeContext';
+import { useContentPadding } from '../hooks/useContentPadding';
 
 import { GROUP_COLORS } from '../constants/colors';
 import { logger } from '../utils/logger';
+import { createFrostedCard, createFrostedSurface } from '../utils/frostedGlass';
 
 export default function GroupsScreen({ navigation }: any) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const { contentPadding } = useContentPadding();
   const [groups, setGroups] = useState<TodoGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -225,22 +228,11 @@ export default function GroupsScreen({ navigation }: any) {
     },
     listContent: {
       padding: 20,
-      paddingBottom: 96,
+      paddingBottom: contentPadding,
     },
     groupItem: {
-      backgroundColor: theme.colors.surface,
-      borderWidth: 1,
-      borderColor: theme.colors.border,
-      borderRadius: 12,
-      marginBottom: 16,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
+      ...createFrostedCard(isDark),
+      marginBottom: theme.spacing.md,
     },
     groupContent: {
       padding: 16,
@@ -254,14 +246,14 @@ export default function GroupsScreen({ navigation }: any) {
       flex: 1,
     },
     colorIndicator: {
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      marginRight: 12,
+      width: 3,
+      height: 24,
+      borderRadius: 2,
+      marginRight: 16,
     },
     groupName: {
-      fontSize: 16,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.md,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
       flex: 1,
     },
@@ -277,7 +269,8 @@ export default function GroupsScreen({ navigation }: any) {
       alignItems: 'center',
       paddingHorizontal: 12,
       paddingVertical: 8,
-      borderRadius: 8,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: 'transparent',
     },
     actionText: {
       fontSize: 14,
@@ -309,15 +302,14 @@ export default function GroupsScreen({ navigation }: any) {
       paddingHorizontal: 20,
     },
     modalContent: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
+      ...createFrostedSurface(isDark),
       padding: 24,
       width: '100%',
       maxWidth: 400,
     },
     modalTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
       marginBottom: 20,
       textAlign: 'center',
@@ -334,10 +326,10 @@ export default function GroupsScreen({ navigation }: any) {
       backgroundColor: theme.colors.backgroundSecondary,
       borderWidth: 1,
       borderColor: theme.colors.border,
-      borderRadius: 8,
+      borderRadius: theme.borderRadius.md,
       paddingHorizontal: 16,
       paddingVertical: 12,
-      fontSize: 16,
+      fontSize: theme.typography.sizes.md,
       color: theme.colors.textPrimary,
     },
     colorSection: {
@@ -391,7 +383,7 @@ export default function GroupsScreen({ navigation }: any) {
       top: 60,
       left: 20,
       right: 20,
-      backgroundColor: '#2D5016',
+      backgroundColor: theme.colors.accent,
       borderRadius: 12,
       paddingVertical: 16,
       paddingHorizontal: 20,
@@ -410,7 +402,7 @@ export default function GroupsScreen({ navigation }: any) {
     successText: {
       color: 'white',
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: '600',
       marginLeft: 12,
     },
   });
@@ -429,6 +421,12 @@ export default function GroupsScreen({ navigation }: any) {
         style={groupStyles.list}
         contentContainerStyle={groupStyles.listContent}
         showsVerticalScrollIndicator={false}
+        // Performance optimizations
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={8}
+        initialNumToRender={8}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
         ListEmptyComponent={
           <View style={groupStyles.emptyState}>
             <Text style={groupStyles.emptyTitle}>

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TextInputProps, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TextInput, TextInputProps, StyleSheet, Animated } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+// Removed - using theme.* properties directly
 
 interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -8,7 +9,7 @@ interface TextFieldProps extends Omit<TextInputProps, 'style'> {
   helper?: string;
   leftIcon?: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
   rightIcon?: React.ComponentType<{ size: number; color: string; strokeWidth: number }>;
-  variant?: 'default' | 'filled' | 'outlined';
+  variant?: 'default' | 'filled' | 'glass';
   size?: 'sm' | 'md' | 'lg';
   style?: any;
 }
@@ -24,40 +25,77 @@ export function TextField({
   onFocus,
   onBlur,
   style,
+  autoFocus = false,
   ...props 
 }: TextFieldProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
+  const [focusAnim] = useState(new Animated.Value(0));
+  const inputRef = useRef<TextInput>(null);
 
   const handleFocus = (e: any) => {
     setIsFocused(true);
+    Animated.timing(focusAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
     onFocus?.(e);
   };
 
   const handleBlur = (e: any) => {
     setIsFocused(false);
+    Animated.timing(focusAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
     onBlur?.(e);
   };
 
   const getVariantStyle = () => {
     switch (variant) {
       case 'filled':
-        return { backgroundColor: theme.colors.backgroundSecondary, borderWidth: 0 };
-      case 'outlined':
-        return { backgroundColor: 'transparent', borderWidth: 2 };
+        return { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
+          borderWidth: 1,
+          borderColor: 'transparent',
+        };
+      case 'glass':
+        return {
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          borderRadius: theme.borderRadius.md,
+        };
       default:
-        return { backgroundColor: theme.colors.surface, borderWidth: 1 };
+        return { 
+          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.02)' : theme.colors.surface,
+          borderWidth: 1,
+        };
     }
   };
 
   const getSizeStyle = () => {
     switch (size) {
       case 'sm':
-        return { paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 };
+        return { 
+          paddingHorizontal: theme.spacing.md, 
+          paddingVertical: theme.spacing.sm, 
+          fontSize: theme.typography.sizes.sm 
+        };
       case 'lg':
-        return { paddingHorizontal: 20, paddingVertical: 16, fontSize: 18 };
+        return { 
+          paddingHorizontal: theme.spacing.lg, 
+          paddingVertical: theme.spacing.md, 
+          fontSize: theme.typography.sizes.lg 
+        };
       default:
-        return { paddingHorizontal: 20, paddingVertical: 12, fontSize: 16 };
+        return { 
+          paddingHorizontal: theme.spacing.lg, 
+          paddingVertical: theme.spacing.sm + 4, 
+          fontSize: theme.typography.sizes.md 
+        };
     }
   };
 
@@ -70,17 +108,17 @@ export function TextField({
   const getIconColor = () => {
     if (error) return theme.colors.error;
     if (isFocused) return theme.colors.accent;
-    return theme.colors.textSecondary;
+    return theme.colors.textMuted;
   };
 
   const getIconPosition = () => {
     switch (size) {
       case 'sm':
-        return { left: 12, right: 12 };
+        return { left: theme.spacing.md, right: theme.spacing.md };
       case 'lg':
-        return { left: 20, right: 20 };
+        return { left: theme.spacing.lg, right: theme.spacing.lg };
       default:
-        return { left: 16, right: 16 };
+        return { left: theme.spacing.md, right: theme.spacing.md };
     }
   };
 
@@ -93,21 +131,31 @@ export function TextField({
 
   const styles = StyleSheet.create({
     container: {
-      marginBottom: 20,
+      marginBottom: theme.spacing.lg,
     },
     label: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
+      fontSize: theme.typography.sizes.sm,
+      fontWeight: theme.typography.weights.medium,
+      color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.xs,
     },
     inputContainer: {
       position: 'relative',
     },
     input: {
-      borderRadius: 12,
+      borderRadius: theme.borderRadius.md,
       color: theme.colors.textPrimary,
-      fontWeight: 'normal',
+      fontWeight: '400',
+      ...getSizeStyle(),
+      ...getVariantStyle(),
+    },
+    focusedInput: {
+      borderColor: theme.colors.accent,
+      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : theme.colors.surface,
+    },
+    errorInput: {
+      borderColor: theme.colors.error,
+      backgroundColor: isDark ? 'rgba(248, 113, 113, 0.1)' : 'rgba(239, 68, 68, 0.1)',
     },
     leftIcon: {
       position: 'absolute',
@@ -120,14 +168,24 @@ export function TextField({
       transform: [{ translateY: -10 }],
     },
     errorText: {
-      fontSize: 12,
+      fontSize: theme.typography.sizes.xs,
       color: theme.colors.error,
-      marginTop: 4,
+      marginTop: theme.spacing.xs,
     },
     helperText: {
-      fontSize: 12,
-      color: theme.colors.textSecondary,
-      marginTop: 4,
+      fontSize: theme.typography.sizes.xs,
+      color: theme.colors.textMuted,
+      marginTop: theme.spacing.xs,
+    },
+    focusRing: {
+      position: 'absolute',
+      top: -1,
+      left: -1,
+      right: -1,
+      bottom: -1,
+      borderRadius: theme.borderRadius.md + 1,
+      borderWidth: 1,
+      borderColor: theme.colors.accent,
     },
   });
 
@@ -140,18 +198,35 @@ export function TextField({
       )}
       
       <View style={styles.inputContainer}>
+        <Animated.View
+          style={[
+            styles.focusRing,
+            {
+              opacity: focusAnim,
+              transform: [{
+                scale: focusAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.98, 1],
+                }),
+              }],
+            },
+          ]}
+        />
+        
         <TextInput
+          ref={inputRef}
           style={[
             styles.input,
-            getVariantStyle(),
-            getSizeStyle(),
             { borderColor: getBorderColor() },
             getInputPadding(),
+            isFocused && styles.focusedInput,
+            error && styles.errorInput,
             style
           ]}
-          placeholderTextColor={theme.colors.textSecondary}
+          placeholderTextColor={theme.colors.textMuted}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          autoFocus={autoFocus}
           accessibilityLabel={label}
           accessibilityHint={helper}
           accessibilityState={{ 
@@ -165,7 +240,7 @@ export function TextField({
             <LeftIcon 
               size={size === 'sm' ? 16 : size === 'lg' ? 22 : 20} 
               color={getIconColor()} 
-              strokeWidth={1.75} 
+              strokeWidth={1.5} 
             />
           </View>
         )}
@@ -175,7 +250,7 @@ export function TextField({
             <RightIcon 
               size={size === 'sm' ? 16 : size === 'lg' ? 22 : 20} 
               color={getIconColor()} 
-              strokeWidth={1.75} 
+              strokeWidth={1.5} 
             />
           </View>
         )}

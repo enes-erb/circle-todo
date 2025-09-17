@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../contexts/ThemeContext';
+import { createFrostedModal } from '../../utils/frostedGlass';
 
 interface BottomSheetProps {
   isVisible: boolean;
@@ -37,7 +38,7 @@ export function BottomSheet({
   showCloseButton = false,
   height = 'auto'
 }: BottomSheetProps) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const backdropAnim = React.useRef(new Animated.Value(0)).current;
 
@@ -117,7 +118,7 @@ export function BottomSheet({
         <Animated.View
           style={[
             styles.bottomSheet,
-            { backgroundColor: theme.colors.surface },
+            createFrostedModal(isDark),
             getHeightStyle(),
             {
               transform: [{ translateY: slideAnim }],
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingBottom: 24,
   },
 });

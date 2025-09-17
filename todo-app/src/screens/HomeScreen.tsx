@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { Search, Inbox, Plus } from 'lucide-react-native';
+import { Search, Plus } from 'lucide-react-native';
 import { LottieConfetti } from '../components/ui/LottieConfetti';
 import { Todo, TodoGroup } from '../types';
 import { storageService } from '../services/storage';
@@ -21,19 +21,26 @@ import { SegmentedControl } from '../components/ui/SegmentedControl';
 import { FAB } from '../components/ui/FAB';
 import { InlineBanner } from '../components/ui/InlineBanner';
 import { useTheme } from '../contexts/ThemeContext';
+import { useContentPadding } from '../hooks/useContentPadding';
 import TodoItem from '../components/TodoItem';
 import GroupHeader from '../components/GroupHeader';
 import { sortAndGroupTasks, SortedItem } from '../utils/taskSorting';
 import { logger } from '../utils/logger';
+import { debounce } from '../utils/performance';
+import { EmptyState } from '../components/EmptyState';
+import { SimpleNotification } from '../components/ui/SimpleNotification';
+// Removed - using theme.* properties directly
 
 type FilterType = 'pending' | 'completed';
 
-export default function HomeScreen({ navigation }: any) {
+export default function HomeScreen({ navigation, route }: any) {
   const { theme, isDark } = useTheme();
+  const { contentPadding } = useContentPadding();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [groups, setGroups] = useState<TodoGroup[]>([]);
   const [filter, setFilter] = useState<FilterType>('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -47,6 +54,30 @@ export default function HomeScreen({ navigation }: any) {
   
   // Completion animation tracking
   const [completingTodos, setCompletingTodos] = useState<Set<string>>(new Set());
+  
+  // Notification state
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+
+  // Handle navigation params for notifications
+  useEffect(() => {
+    if (route.params?.showNotification) {
+      setNotificationMessage(route.params.showNotification);
+      setShowNotification(true);
+      // Clear the param to avoid showing again
+      navigation.setParams({ showNotification: undefined });
+    }
+  }, [route.params?.showNotification, navigation]);
+
+  // Debounced search update
+  const updateDebouncedSearch = useMemo(
+    () => debounce((value: string) => setDebouncedSearchQuery(value), 300),
+    []
+  );
+
+  useEffect(() => {
+    updateDebouncedSearch(searchQuery);
+  }, [searchQuery, updateDebouncedSearch]);
 
   const loadData = useCallback(async () => {
     try {
@@ -75,15 +106,17 @@ export default function HomeScreen({ navigation }: any) {
     }, [loadData])
   );
 
-  const filteredTodos = todos.filter((todo) => {
-    const matchesFilter = 
-      (filter === 'completed' && todo.completed) ||
-      (filter === 'pending' && !todo.completed);
-    
-    const matchesSearch = todo.title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    return matchesFilter && matchesSearch;
-  });
+  const filteredTodos = useMemo(() => {
+    return todos.filter((todo) => {
+      const matchesFilter = 
+        (filter === 'completed' && todo.completed) ||
+        (filter === 'pending' && !todo.completed);
+      
+      const matchesSearch = todo.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      
+      return matchesFilter && matchesSearch;
+    });
+  }, [todos, filter, debouncedSearchQuery]);
 
   // Get sorted and grouped items for display
   const sortedItems = useMemo(() => {
@@ -282,7 +315,7 @@ export default function HomeScreen({ navigation }: any) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const renderSortedItem = ({ item }: { item: SortedItem }) => {
+  const renderSortedItem = useCallback(({ item }: { item: SortedItem }) => {
     if (item.type === 'group_header') {
       // Count tasks in this group
       const groupTaskCount = sortedItems.filter(
@@ -307,31 +340,14 @@ export default function HomeScreen({ navigation }: any) {
         />
       );
     }
-  };
+  }, [sortedItems, groups, handleToggleComplete, handleDeleteTodo, completingTodos]);
 
   const filterItems = [
     { value: 'pending', label: `${localizationService.t('todos.pending')} (${pendingTodos})` },
     { value: 'completed', label: `${localizationService.t('todos.completed')} (${completedTodos})` },
   ];
 
-  const renderEmptyList = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Inbox size={48} color={theme.colors.textSecondary} strokeWidth={1.75} />
-      </View>
-      <Text style={styles.emptyTitle}>
-        {filter === 'completed' 
-          ? 'Keine erledigten Aufgaben'
-          : 'Keine offenen Aufgaben'
-        }
-      </Text>
-      {filter === 'pending' && (
-        <Text style={styles.emptySubtitle}>
-          Erstelle deine erste Aufgabe und leg los!
-        </Text>
-      )}
-    </View>
-  );
+  const renderEmptyList = () => <EmptyState filter={filter} />;
 
   const styles = useMemo(() => StyleSheet.create({
     container: {
@@ -339,35 +355,17 @@ export default function HomeScreen({ navigation }: any) {
       backgroundColor: theme.colors.background,
     },
     searchContainer: {
-      paddingHorizontal: 20,
+      paddingHorizontal: 24,
       paddingVertical: 16,
       gap: 16,
+      backgroundColor: isDark ? theme.colors.background : theme.colors.backgroundSecondary,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.colors.border,
     },
     listContainer: {
       flex: 1,
-      paddingHorizontal: 20,
-    },
-    emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 64,
-    },
-    emptyIcon: {
-      alignItems: 'center',
-      marginBottom: 24,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: theme.colors.textPrimary,
-      marginBottom: 8,
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 16,
-      color: theme.colors.textSecondary,
-      textAlign: 'center',
-      marginBottom: 24,
+      paddingHorizontal: 24,
+      backgroundColor: theme.colors.background,
     },
     celebrationOverlay: {
       position: 'absolute',
@@ -377,23 +375,20 @@ export default function HomeScreen({ navigation }: any) {
       bottom: 0,
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 100, // Higher than before but much lower than confetti
-      backgroundColor: 'rgba(0, 0, 0, 0.2)', // Much more transparent to show confetti
+      zIndex: 100,
+      backgroundColor: isDark ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.7)',
     },
     celebrationCard: {
-      backgroundColor: isDark ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderRadius: 16,
+      backgroundColor: isDark ? 'rgba(31, 31, 31, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      borderRadius: 20,
       padding: 32,
       marginHorizontal: 32,
       alignItems: 'center',
       shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 8,
-      },
-      shadowOpacity: 0.25,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
       shadowRadius: 16,
-      elevation: 12,
+      elevation: 8,
       borderWidth: 1,
       borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
     },
@@ -440,12 +435,14 @@ export default function HomeScreen({ navigation }: any) {
 
       <View style={styles.listContainer}>
         {filter === 'completed' && filteredTodos.length > 0 && (
-          <InlineBanner
-            title="Auto-Delete Info"
-            message="Completed tasks are automatically deleted after 30 seconds"
-            variant="info"
-            showIcon={true}
-          />
+          <View style={{ marginTop: 20 }}>
+            <InlineBanner
+              title="Auto-Delete Info"
+              message="Completed tasks are automatically deleted after 30 seconds"
+              variant="info"
+              showIcon={true}
+            />
+          </View>
         )}
         
         <FlatList
@@ -463,7 +460,14 @@ export default function HomeScreen({ navigation }: any) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
           ListEmptyComponent={renderEmptyList}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: contentPadding }}
+          // Performance optimizations
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          initialNumToRender={10}
+          windowSize={10}
+          updateCellsBatchingPeriod={50}
+          disableVirtualization={false}
         />
       </View>
 
@@ -497,6 +501,12 @@ export default function HomeScreen({ navigation }: any) {
       <FAB 
         onPress={() => navigation.navigate('AddTodo')}
         icon={Plus}
+      />
+
+      <SimpleNotification
+        visible={showNotification}
+        message={notificationMessage}
+        onComplete={() => setShowNotification(false)}
       />
     </View>
   );

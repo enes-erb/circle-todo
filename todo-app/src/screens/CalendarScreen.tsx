@@ -19,10 +19,11 @@ import { storageService } from '../services/storage';
 import { localizationService } from '../services/localization';
 import { FAB } from '../components/ui/FAB';
 import { useTheme } from '../contexts/ThemeContext';
+import { useContentPadding } from '../hooks/useContentPadding';
 import { logger } from '../utils/logger';
+import { createFrostedCard } from '../utils/frostedGlass';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DAY_WIDTH = SCREEN_WIDTH / 7;
+// Removed fixed width - using flexbox instead
 
 interface CalendarDay {
   date: Date;
@@ -32,7 +33,8 @@ interface CalendarDay {
 }
 
 export default function CalendarScreen({ navigation }: any) {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
+  const { contentPadding } = useContentPadding();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -79,8 +81,10 @@ export default function CalendarScreen({ navigation }: any) {
     
     const days: CalendarDay[] = [];
     
-    const prevMonth = new Date(year, month - 1, 0);
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+    // Fill in days from previous month to complete the first week
+    const prevMonth = new Date(year, month, 0);
+    const daysFromPrevMonth = firstDayOfWeek;
+    for (let i = daysFromPrevMonth - 1; i >= 0; i--) {
       const date = new Date(year, month - 1, prevMonth.getDate() - i);
       days.push({
         date,
@@ -174,10 +178,13 @@ export default function CalendarScreen({ navigation }: any) {
 
     const dayStyle = [
       styles.calendarDay,
-      { width: DAY_WIDTH, height: DAY_WIDTH * 0.8 },
+      !day.isCurrentMonth && styles.inactiveDay,
+    ];
+
+    const dayNumberContainerStyle = [
+      styles.dayNumberContainer,
       day.isToday && styles.todayDay,
       isSelected && styles.selectedDay,
-      !day.isCurrentMonth && styles.inactiveDay,
     ];
 
     const textStyle = [
@@ -195,9 +202,11 @@ export default function CalendarScreen({ navigation }: any) {
         style={dayStyle}
         onPress={() => handleDateSelect(day.date)}
       >
-        <Text style={textStyle}>
-          {day.date.getDate()}
-        </Text>
+        <View style={dayNumberContainerStyle}>
+          <Text style={textStyle}>
+            {day.date.getDate()}
+          </Text>
+        </View>
         
         {hasTodos && (
           <View style={styles.todoIndicators}>
@@ -246,25 +255,16 @@ export default function CalendarScreen({ navigation }: any) {
       marginBottom: 16,
     },
     headerCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      paddingVertical: 20,
+      ...createFrostedCard(isDark),
+      paddingVertical: 16,
       paddingHorizontal: 20,
       alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
     },
     headerTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: theme.colors.accent,
-      marginBottom: 8,
+      fontSize: theme.typography.sizes.xl,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.textPrimary,
+      marginBottom: 4,
     },
     headerSubtitle: {
       fontSize: 14,
@@ -276,17 +276,8 @@ export default function CalendarScreen({ navigation }: any) {
       marginBottom: 16,
     },
     calendarCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 16,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
+      ...createFrostedCard(isDark),
+      padding: 20,
     },
     monthHeader: {
       flexDirection: 'row',
@@ -296,11 +287,12 @@ export default function CalendarScreen({ navigation }: any) {
     },
     monthNavButton: {
       padding: 8,
-      borderRadius: 8,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: 'transparent',
     },
     monthTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
     },
     dayHeadersRow: {
@@ -308,21 +300,31 @@ export default function CalendarScreen({ navigation }: any) {
       marginBottom: 8,
     },
     dayHeader: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: theme.colors.textSecondary,
+      flex: 1,
+      fontSize: theme.typography.sizes.xs,
+      fontWeight: theme.typography.weights.medium,
+      color: theme.colors.textMuted,
       textAlign: 'center',
+      paddingVertical: 8,
     },
     calendarGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
     },
     calendarDay: {
+      width: '14.28%',
+      aspectRatio: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      borderRadius: 8,
-      margin: 2,
+      padding: 2,
       position: 'relative',
+    },
+    dayNumberContainer: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     todayDay: {
       backgroundColor: theme.colors.accentWeak,
@@ -371,17 +373,8 @@ export default function CalendarScreen({ navigation }: any) {
       marginBottom: 16,
     },
     tasksCard: {
-      backgroundColor: theme.colors.surface,
-      borderRadius: 12,
-      padding: 16,
-      shadowColor: '#000',
-      shadowOffset: {
-        width: 0,
-        height: 1,
-      },
-      shadowOpacity: 0.05,
-      shadowRadius: 3,
-      elevation: 2,
+      ...createFrostedCard(isDark),
+      padding: 20,
     },
     tasksHeader: {
       flexDirection: 'row',
@@ -390,23 +383,25 @@ export default function CalendarScreen({ navigation }: any) {
       marginBottom: 16,
     },
     tasksTitle: {
-      fontSize: 18,
-      fontWeight: '600',
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
       color: theme.colors.textPrimary,
     },
     tasksBadge: {
-      backgroundColor: theme.colors.accentWeak,
-      paddingHorizontal: 8,
+      backgroundColor: theme.colors.surface,
+      paddingHorizontal: 10,
       paddingVertical: 4,
-      borderRadius: 12,
-      minWidth: 24,
+      borderRadius: theme.borderRadius.full,
+      minWidth: 28,
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.colors.border,
     },
     tasksBadgeText: {
-      fontSize: 12,
-      fontWeight: '500',
-      color: theme.colors.accent,
+      fontSize: theme.typography.sizes.xs,
+      fontWeight: theme.typography.weights.medium,
+      color: theme.colors.textSecondary,
     },
     emptyState: {
       alignItems: 'center',
@@ -437,7 +432,7 @@ export default function CalendarScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: contentPadding }}>
         {/* Header */}
         <View style={styles.headerSection}>
           <View style={styles.headerCard}>
@@ -479,7 +474,7 @@ export default function CalendarScreen({ navigation }: any) {
               {dayNames.map(day => (
                 <Text
                   key={day}
-                  style={[styles.dayHeader, { width: DAY_WIDTH }]}
+                  style={styles.dayHeader}
                 >
                   {day}
                 </Text>
@@ -521,6 +516,12 @@ export default function CalendarScreen({ navigation }: any) {
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
                 ItemSeparatorComponent={() => <View style={styles.taskSeparator} />}
+                // Performance optimizations
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={5}
+                initialNumToRender={5}
+                windowSize={3}
+                updateCellsBatchingPeriod={50}
               />
             )}
           </View>

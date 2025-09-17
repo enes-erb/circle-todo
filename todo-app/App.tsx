@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, useColorScheme } from 'react-native';
+import { View, useColorScheme, Image, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { CheckSquare, Calendar, Users, Settings } from 'lucide-react-native';
 import { localizationService } from './src/services/localization';
 import { notificationService } from './src/services/notifications';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { NavigationHeightProvider } from './src/contexts/NavigationHeightContext';
+import { FloatingTabBar } from './src/components/navigation/FloatingTabBar';
 
 import HomeScreen from './src/screens/HomeScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
@@ -25,58 +26,12 @@ function TabNavigator() {
   
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let IconComponent;
-
-          switch (route.name) {
-            case 'Home':
-              IconComponent = CheckSquare;
-              break;
-            case 'Calendar':
-              IconComponent = Calendar;
-              break;
-            case 'Groups':
-              IconComponent = Users;
-              break;
-            case 'Settings':
-              IconComponent = Settings;
-              break;
-            default:
-              IconComponent = CheckSquare;
-          }
-
-          return <IconComponent size={size} color={color} strokeWidth={focused ? 2 : 1.5} />;
-        },
-        tabBarActiveTintColor: theme.colors.accent,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopWidth: 0.5,
-          borderTopColor: theme.colors.border,
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: -2,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 8,
-        },
-        tabBarShowLabel: true,
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '500',
-        },
-        tabBarItemStyle: {
-          paddingTop: 5,
-        },
-        // Enable smooth transitions between tabs
-        animationEnabled: true,
-        // Add spring animation
-        tabBarHideOnKeyboard: true,
-      })}
+        // Performance optimizations
+        lazy: false,
+      }}
     >
       <Tab.Screen 
         name="Home" 
@@ -104,26 +59,53 @@ function TabNavigator() {
 
 function AppContent() {
   const { isDark, theme } = useTheme();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
     async function initialize() {
       try {
-        await localizationService.initialize();
-        await notificationService.requestPermissions();
-        setIsInitialized(true);
+        // Start initialization immediately but show splash for minimum time
+        const initPromise = Promise.all([
+          localizationService.initialize(),
+          notificationService.requestPermissions()
+        ]);
+        
+        const minSplashTime = new Promise(resolve => setTimeout(resolve, 1200)); // Reduced from 1500ms
+        
+        await Promise.all([minSplashTime, initPromise]);
+        
+        // Small delay for smooth transition
+        setTimeout(() => setIsAppReady(true), 100);
       } catch (error) {
         console.error('App initialization failed:', error);
-        setIsInitialized(true);
+        setTimeout(() => setIsAppReady(true), 100);
       }
     }
     
     initialize();
   }, []);
 
-  if (!isInitialized) {
-    return null;
+  if (!isAppReady) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        backgroundColor: isDark ? '#111827' : '#ffffff',
+        justifyContent: 'center',
+        alignItems: 'center'
+      }}>
+        <Image 
+          source={isDark 
+            ? require('./assets/icons/splash-icon-dark.png')
+            : require('./assets/icons/splash-icon-light.png')
+          }
+          style={{ width: 200, height: 200 }}
+          resizeMode="contain"
+        />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </View>
+    );
   }
+
 
   return (
     <NavigationContainer>
@@ -157,7 +139,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <AppContent />
+        <NavigationHeightProvider>
+          <AppContent />
+        </NavigationHeightProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
